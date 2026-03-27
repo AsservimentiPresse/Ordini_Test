@@ -17,41 +17,47 @@ body {
   margin:0;
 }
 
-h2 { font-size:28px; }
+/* TITOLI */
+h2 { font-size:32px; }
 
+/* BOTTONI GRANDI */
 button {
-  font-size: 22px;
-  padding: 18px;
-  margin: 8px;
+  font-size: 26px;
+  padding: 22px;
+  margin: 10px;
   width: 95%;
-  border-radius:12px;
+  border-radius:15px;
   border:none;
   background:#007bff;
   color:white;
 }
 
-button:active { transform: scale(0.97); }
-
-#reader {
-  width: 95%;
-  max-width: 500px;
-  margin: 15px auto;
+/* SCAN BUTTON */
+.scan-btn {
+  background:#28a745;
+  font-size:30px;
 }
 
-ul { padding:0; }
+/* SCANNER GRANDE */
+#reader {
+  width: 100%;
+  max-width: 600px;
+  margin: 10px auto;
+}
 
+/* LISTA */
 li {
-  font-size:20px;
-  margin:8px;
+  font-size:22px;
+  margin:10px;
   background:white;
-  padding:10px;
-  border-radius:10px;
+  padding:15px;
+  border-radius:12px;
   list-style:none;
 }
 
 .small-btn {
-  font-size:16px;
-  padding:6px 10px;
+  font-size:18px;
+  padding:8px 12px;
   margin-left:10px;
   background:red;
 }
@@ -63,7 +69,7 @@ li {
 
 <h2>📦 Ordini Magazzino</h2>
 
-<button onclick="startScanner()">📷 Avvia Scanner</button> <button onclick="resetOrdine()">🗑️ Reset Ordine</button> <button onclick="fineOrdine()">✅ Fine Ordine</button>
+<button onclick="startScanner()">📷 Avvia Scanner</button> <button class="scan-btn" onclick="attivaScan()">🎯 SCANSIONA</button> <button onclick="resetOrdine()">🗑️ Reset Ordine</button> <button onclick="fineOrdine()">✅ Fine Ordine</button>
 
 <div id="reader"></div>
 
@@ -72,7 +78,7 @@ li {
 
 <script>
 
-// 📦 DATABASE (esempio - inserisci tutti i tuoi)
+// 📦 DATABASE
 let prodotti = {
 "NS E4TE1SMK-F41": { descrizione:"Finecorsa sicurezza PIZZATO", codiceInterno:"6274", tipo:"C"},
 "CA12PD0M": { descrizione:"Cavo finecorsa 12m", codiceInterno:"6275", tipo:"C"},
@@ -86,6 +92,7 @@ aggiornaLista();
 
 // 📷 SCANNER
 let scanner;
+let scanAttivo = false;
 
 function startScanner() {
 
@@ -95,25 +102,26 @@ function startScanner() {
 
   scanner.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 300, height: 300 } },
+    { fps: 10, qrbox: { width: 350, height: 350 } },
 
     (codice) => {
 
-      // 🛑 STOP subito dopo lettura
+      // 👉 legge SOLO se premi SCANSIONA
+      if (!scanAttivo) return;
+      scanAttivo = false;
+
+      // 🛑 STOP dopo lettura
       scanner.stop().then(() => {
         scanner.clear();
         scanner = null;
 
-        // 🔧 NORMALIZZAZIONE QR
         let codicePulito = codice.trim().toUpperCase();
 
-        // ❌ NON TROVATO
         if (!prodotti[codicePulito]) {
           alert("❌ Prodotto non trovato: " + codicePulito);
           return;
         }
 
-        // 🔢 QUANTITÀ
         let qty = parseInt(prompt("Quantità per " + codicePulito));
 
         if (isNaN(qty) || qty <= 0) {
@@ -121,7 +129,6 @@ function startScanner() {
           return;
         }
 
-        // 📦 AGGIUNTA
         ordine[codicePulito] = (ordine[codicePulito] || 0) + qty;
 
         salvaOrdine();
@@ -130,11 +137,16 @@ function startScanner() {
         if (navigator.vibrate) navigator.vibrate(200);
         new Audio("https://www.soundjay.com/buttons/beep-07.wav").play();
 
-        // 🔁 RIAVVIO AUTOMATICO (opzionale ma utile)
+        // 🔁 RIAVVIO AUTOMATICO
         setTimeout(() => startScanner(), 500);
       });
     }
   );
+}
+
+// 🎯 ATTIVA SCANSIONE
+function attivaScan() {
+  scanAttivo = true;
 }
 
 // 📊 LISTA
@@ -211,7 +223,6 @@ function generaExcel(dati) {
   let wb = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(wb, ws, "Ordine");
-
   XLSX.writeFile(wb, "ordine_" + new Date().toISOString() + ".xlsx");
 }
 
@@ -228,10 +239,6 @@ function inviaWhatsApp(dati) {
 
 </body>
 </html>
-
-
-
-
 
 
 
