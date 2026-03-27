@@ -3,7 +3,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Ordini Magazzino</title>
+<title>Ordini Magazzino PRO</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -13,19 +13,18 @@
 body {
   font-family: Arial;
   text-align: center;
-  background:#f5f5f5;
+  background:#111;
+  color:white;
   margin:0;
 }
 
-/* TITOLI */
 h2 { font-size:32px; }
-h3 { font-size:26px; }
 
 /* BOTTONI */
 button {
   font-size: 26px;
-  padding: 22px;
-  margin: 10px;
+  padding: 20px;
+  margin: 8px;
   width: 95%;
   border-radius:15px;
   border:none;
@@ -33,58 +32,29 @@ button {
   color:white;
 }
 
-.scan-btn { background:#28a745; font-size:30px; }
 .stop-btn { background:#dc3545; }
 
-/* SCANNER */
+/* SCANNER FULL */
 #reader {
   width: 100%;
-  max-width: 600px;
-  margin: 15px auto;
+  height: 60vh;
 }
 
 /* LISTA */
 li {
-  font-size:22px;
+  font-size:24px;
   margin:10px;
-  background:white;
+  background:#222;
   padding:15px;
   border-radius:12px;
   list-style:none;
 }
 
-.small-btn {
-  font-size:18px;
-  padding:8px 12px;
-  margin-left:10px;
-  background:red;
-}
-
-/* POPUP */
-#popup {
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  display:none;
-  align-items:center;
-  justify-content:center;
-}
-
-#popupBox {
-  background:white;
-  padding:30px;
-  border-radius:15px;
-  width:90%;
-  max-width:400px;
-}
-
-#popupBox input {
-  font-size:28px;
-  width:100%;
+/* INDICATORE SCAN */
+#status {
+  font-size:22px;
   padding:10px;
-  margin:15px 0;
-  text-align:center;
+  background:#28a745;
 }
 </style>
 
@@ -92,32 +62,22 @@ li {
 
 <body>
 
-<h2>📦 Ordini Magazzino</h2>
+<h2>⚡ Ordini Magazzino PRO</h2>
 
-<button onclick="startCamera()">📷 Avvia Fotocamera</button> <button class="scan-btn" onclick="attivaScan()">🎯 SCANSIONA ORA</button> <button class="stop-btn" onclick="stopCamera()">⛔ Stop Camera</button> <button onclick="resetOrdine()">🗑️ Reset Ordine</button> <button onclick="fineOrdine()">✅ Fine Ordine</button>
+<div id="status">📷 Camera pronta</div>
+
+<button onclick="startCamera()">▶️ Avvia</button> <button class="stop-btn" onclick="stopCamera()">⛔ Stop</button> <button onclick="resetOrdine()">🗑️ Reset</button> <button onclick="fineOrdine()">✅ Fine Ordine</button>
 
 <div id="reader"></div>
 
-<h3>Lista ordine</h3>
 <ul id="lista"></ul>
-
-<!-- POPUP -->
-
-<div id="popup">
-  <div id="popupBox">
-    <h3 id="titoloPopup"></h3>
-    <input type="number" id="qtyInput" placeholder="Quantità">
-    <button onclick="confermaQty()">✅ Conferma</button>
-    <button onclick="chiudiPopup()">❌ Annulla</button>
-  </div>
-</div>
 
 <script>
 
 // 📦 DATABASE
 let prodotti = {
-"NS E4TE1SMK-F41": { descrizione:"Finecorsa sicurezza", codiceInterno:"6274", tipo:"C"},
-"CA12PD0M": { descrizione:"Cavo 12m", codiceInterno:"6275", tipo:"C"}
+"NS E4TE1SMK-F41": { descrizione:"Finecorsa sicurezza"},
+"CA12PD0M": { descrizione:"Cavo 12m"}
 };
 
 // 📦 ORDINE
@@ -125,10 +85,10 @@ let ordine = JSON.parse(localStorage.getItem("ordine")) || {};
 aggiornaLista();
 
 let scanner;
-let scanAttivo = false;
-let codiceCorrente = null;
+let lastScan = "";
+let scanningLock = false;
 
-// 📷 CAMERA
+// 📷 START
 function startCamera() {
 
   if (scanner) return;
@@ -137,31 +97,43 @@ function startCamera() {
 
   scanner.start(
     { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 350, height: 350 } },
+    { fps: 15, qrbox: { width: 300, height: 300 } },
 
     (codice) => {
 
-      if (!scanAttivo) return;
-      scanAttivo = false;
+      if (scanningLock) return;
 
-      codiceCorrente = codice.trim().toUpperCase();
+      let codicePulito = codice.trim().toUpperCase();
 
-      if (!prodotti[codiceCorrente]) {
-        alert("❌ Non trovato: " + codiceCorrente);
+      if (!prodotti[codicePulito]) {
+        document.getElementById("status").innerText = "❌ NON TROVATO";
         return;
       }
 
-      apriPopup(codiceCorrente);
+      // 🔒 BLOCCO ANTI DOPPIO
+      scanningLock = true;
+
+      ordine[codicePulito] = (ordine[codicePulito] || 0) + 1;
+
+      salvaOrdine();
+      aggiornaLista();
+
+      document.getElementById("status").innerText =
+        "✅ " + codicePulito + " +1";
+
+      if (navigator.vibrate) navigator.vibrate(100);
+      new Audio("https://www.soundjay.com/buttons/beep-07.wav").play();
+
+      // 🔁 SBLOCCO DOPO 1s
+      setTimeout(() => {
+        scanningLock = false;
+        document.getElementById("status").innerText = "📷 Pronto...";
+      }, 1000);
     }
   );
 }
 
-// 🎯 ATTIVA SCAN
-function attivaScan() {
-  scanAttivo = true;
-}
-
-// ⛔ STOP CAMERA
+// ⛔ STOP
 function stopCamera() {
   if (scanner) {
     scanner.stop().then(() => {
@@ -171,41 +143,6 @@ function stopCamera() {
   }
 }
 
-// 📦 POPUP
-function apriPopup(cod) {
-  document.getElementById("popup").style.display = "flex";
-  document.getElementById("titoloPopup").innerText = cod;
-  document.getElementById("qtyInput").value = "";
-}
-
-// ❌ CHIUDI
-function chiudiPopup() {
-  document.getElementById("popup").style.display = "none";
-}
-
-// ✅ CONFERMA QTA
-function confermaQty() {
-
-  let qty = parseInt(document.getElementById("qtyInput").value);
-
-  if (isNaN(qty) || qty <= 0) {
-    alert("Quantità non valida");
-    return;
-  }
-
-  ordine[codiceCorrente] = (ordine[codiceCorrente] || 0) + qty;
-
-  salvaOrdine();
-  aggiornaLista();
-  chiudiPopup();
-
-  if (navigator.vibrate) navigator.vibrate(200);
-
-  // 🔁 RIAVVIO CAMERA AUTOMATICO
-  stopCamera();
-  setTimeout(() => startCamera(), 500);
-}
-
 // 📊 LISTA
 function aggiornaLista() {
   let ul = document.getElementById("lista");
@@ -213,26 +150,14 @@ function aggiornaLista() {
 
   for (let cod in ordine) {
     let li = document.createElement("li");
-
-    li.innerHTML = `
-      <b>${cod}</b> → ${ordine[cod]}
-      <button class="small-btn" onclick="rimuovi('${cod}')">❌</button>
-    `;
-
+    li.innerText = cod + " → " + ordine[cod];
     ul.appendChild(li);
   }
 }
 
-// ❌ RIMUOVI
-function rimuovi(cod) {
-  delete ordine[cod];
-  salvaOrdine();
-  aggiornaLista();
-}
-
 // 🗑️ RESET
 function resetOrdine() {
-  if (!confirm("Vuoi cancellare tutto?")) return;
+  if (!confirm("Reset ordine?")) return;
   ordine = {};
   salvaOrdine();
   aggiornaLista();
@@ -243,7 +168,7 @@ function salvaOrdine() {
   localStorage.setItem("ordine", JSON.stringify(ordine));
 }
 
-// ✅ FINE ORDINE
+// ✅ FINE
 function fineOrdine() {
 
   if (Object.keys(ordine).length === 0) {
@@ -254,26 +179,20 @@ function fineOrdine() {
   let dati = [];
 
   for (let cod in ordine) {
-    let p = prodotti[cod];
-
     dati.push({
-      "Descrizione": p.descrizione,
-      "Q.ta": ordine[cod],
       "CODICE": cod,
-      "CODICE INTERNO": p.codiceInterno,
-      "Tipo": p.tipo
+      "Q.ta": ordine[cod]
     });
   }
 
-  if (confirm("Salvare Excel?")) generaExcel(dati);
-  if (confirm("Inviare WhatsApp?")) inviaWhatsApp(dati);
+  if (confirm("Excel?")) generaExcel(dati);
+  if (confirm("WhatsApp?")) inviaWhatsApp(dati);
 }
 
 // 📊 EXCEL
 function generaExcel(dati) {
   let ws = XLSX.utils.json_to_sheet(dati);
   let wb = XLSX.utils.book_new();
-
   XLSX.utils.book_append_sheet(wb, ws, "Ordine");
   XLSX.writeFile(wb, "ordine.xlsx");
 }
@@ -287,11 +206,17 @@ function inviaWhatsApp(dati) {
   window.open(`https://wa.me/?text=${testo}`);
 }
 
+// 🔘 TASTI VOLUME = SCAN (alcuni Android)
+document.addEventListener("keydown", (e) => {
+  if (e.key === "VolumeUp" || e.key === "VolumeDown") {
+    scanningLock = false;
+  }
+});
+
 </script>
 
 </body>
 </html>
-
 
 
 
