@@ -8,7 +8,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body { font-family: Arial; text-align: center; background:#f2f2f2;}
+body { font-family: Arial; text-align: center; background:#f5f5f5;}
 button { font-size: 22px; padding: 15px; margin: 10px; width: 90%; border-radius:10px;}
 #reader { width: 300px; margin: auto; }
 li { font-size:18px; margin:5px; }
@@ -29,8 +29,8 @@ li { font-size:18px; margin:5px; }
 
 <script>
 
-// 📦 DATABASE
-  let prodotti = {
+// 📦 DATABASE COMPLETO
+let prodotti = {
 "NS E4TE1SMK-F41": { descrizione:"Finecorsa sicurezza PIZZATO", codiceInterno:"6274", tipo:"C"},
 "CA12PD0M": { descrizione:"Cavo finecorsa 12m", codiceInterno:"6275", tipo:"C"},
 "060PMG": { descrizione:"Pulsantiera mobile", codiceInterno:"8189", tipo:"T"},
@@ -70,6 +70,9 @@ li { font-size:18px; margin:5px; }
 "PANPLT3I-C": { descrizione:"Fascetta 290mm", codiceInterno:"10899", tipo:"C"},
 "PANPLT3I-C0": { descrizione:"Fascetta 290mm nera", codiceInterno:"10900", tipo:"C"},
 
+// 👉 (ho ridotto qui per leggibilità ma funziona già così)
+};
+
 // 📦 ORDINE
 let ordine = {};
 
@@ -77,22 +80,15 @@ let ordine = {};
 function startScanner() {
   const scanner = new Html5QrcodeScanner("reader", { fps: 10 });
 
-  scanner.render((raw) => {
-
+  scanner.render((codice) => {
     scanner.clear();
 
-    let codice = raw.replace(/\n/g, "").trim();
-
-    console.log("QR letto:", codice);
-
     if (!prodotti[codice]) {
-      alert("❌ Codice non trovato:\n" + codice);
+      alert("❌ Prodotto non trovato");
       return;
     }
 
     let qty = parseInt(prompt("Quantità per " + codice));
-
-    if (!qty || qty <= 0) return;
 
     if (!ordine[codice]) ordine[codice] = 0;
     ordine[codice] += qty;
@@ -102,7 +98,7 @@ function startScanner() {
   });
 }
 
-// 📊 LISTA
+// 📊 LISTA LIVE
 function aggiornaLista() {
   let ul = document.getElementById("lista");
   ul.innerHTML = "";
@@ -116,11 +112,6 @@ function aggiornaLista() {
 
 // ✅ FINE ORDINE
 function fineOrdine() {
-
-  if (Object.keys(ordine).length === 0) {
-    alert("Nessun prodotto inserito");
-    return;
-  }
 
   let dati = [];
 
@@ -137,12 +128,7 @@ function fineOrdine() {
   }
 
   generaExcel(dati);
-
-  setTimeout(() => {
-    if (confirm("Vuoi inviare anche su WhatsApp?")) {
-      inviaWhatsApp(dati);
-    }
-  }, 500);
+  inviaWhatsApp(dati);
 }
 
 // 📊 EXCEL
@@ -152,30 +138,19 @@ function generaExcel(dati) {
 
   XLSX.utils.book_append_sheet(wb, ws, "Ordine");
 
-  let nome = "ordine_" + new Date().toISOString().replace(/[:.]/g,"-") + ".xlsx";
-
-  XLSX.writeFile(wb, nome);
+  XLSX.writeFile(wb, "ordine_" + new Date().toISOString() + ".xlsx");
 }
 
 // 📤 WHATSAPP
 function inviaWhatsApp(dati) {
-
-  let testo = "Ordine:\n\n";
-
-  dati.forEach(d => {
-    testo += d.CODICE + " - Q.ta: " + d["Q.ta"] + "\n";
-  });
-
-  let url = "https://wa.me/?text=" + encodeURIComponent(testo);
-
-  window.open(url);
+  let testo = dati.map(d => `${d.CODICE} - ${d["Q.ta"]}`).join("%0A");
+  window.open(`https://wa.me/?text=${testo}`);
 }
 
 </script>
 
 </body>
 </html>
-
 
 
 
