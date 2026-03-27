@@ -1,26 +1,73 @@
 <!DOCTYPE html>
+
 <html>
 <head>
 <meta charset="UTF-8">
 <title>Ordini Magazzino</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
+
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body { font-family: Arial; text-align: center; background:#f5f5f5;}
-button { font-size: 22px; padding: 15px; margin: 10px; width: 90%; border-radius:10px;}
-#reader { width: 300px; margin: auto; }
-li { font-size:18px; margin:5px; }
+body {
+  font-family: Arial;
+  text-align: center;
+  background:#f5f5f5;
+  margin:0;
+}
+
+h2 { font-size:28px; }
+
+button {
+  font-size: 22px;
+  padding: 18px;
+  margin: 8px;
+  width: 95%;
+  border-radius:12px;
+  border:none;
+  background:#007bff;
+  color:white;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+#reader {
+  width: 95%;
+  max-width: 500px;
+  margin: 15px auto;
+}
+
+ul {
+  padding:0;
+}
+
+li {
+  font-size:20px;
+  margin:8px;
+  background:white;
+  padding:10px;
+  border-radius:10px;
+  list-style:none;
+}
+
+.small-btn {
+  font-size:16px;
+  padding:6px 10px;
+  margin-left:10px;
+  background:red;
+}
 </style>
+
 </head>
 
 <body>
 
 <h2>📦 Ordini Magazzino</h2>
 
-<button onclick="startScanner()">📷 Scansiona QR</button>
-<button onclick="fineOrdine()">✅ Fine Ordine</button>
+<button onclick="startScanner()">📷 Avvia Scanner</button> <button onclick="stopScanner()">⛔ Ferma Scanner</button> <button onclick="resetOrdine()">🗑️ Reset Ordine</button> <button onclick="fineOrdine()">✅ Fine Ordine</button>
 
 <div id="reader"></div>
 
@@ -29,89 +76,112 @@ li { font-size:18px; margin:5px; }
 
 <script>
 
-// 📦 DATABASE COMPLETO
+// 📦 DATABASE
 let prodotti = {
 "NS E4TE1SMK-F41": { descrizione:"Finecorsa sicurezza PIZZATO", codiceInterno:"6274", tipo:"C"},
 "CA12PD0M": { descrizione:"Cavo finecorsa 12m", codiceInterno:"6275", tipo:"C"},
 "060PMG": { descrizione:"Pulsantiera mobile", codiceInterno:"8189", tipo:"T"},
-"016P3P22": { descrizione:"Pulsante 3 posizioni", codiceInterno:"8190", tipo:"T"},
-"MU54630": { descrizione:"Modulo PROFINET", codiceInterno:"8587", tipo:""},
-"MU59818": { descrizione:"Hub IO-Link", codiceInterno:"8588", tipo:""},
-"CANALE ZAMET": { descrizione:"Canale ZAMET", codiceInterno:"9782", tipo:""},
-"MU59738": { descrizione:"Hub IO-Link Class A", codiceInterno:"9817", tipo:""},
-"OMRA4EGBM2B041": { descrizione:"Pulsante sicurezza OMRON", codiceInterno:"9897", tipo:"C"},
-"OMRA4EGOP2": { descrizione:"Supporto sicurezza", codiceInterno:"9898", tipo:"C"},
-"SIE 6FX50022DC101DA0": { descrizione:"Cavo segnale 30m", codiceInterno:"10736", tipo:"T"},
-"SIE 6FX50025DN461DA0": { descrizione:"Cavo potenza 30m", codiceInterno:"10738", tipo:"T"},
-"TEASMPF07B": { descrizione:"Guaina PAST 7", codiceInterno:"10858", tipo:"C"},
-"TEASMPF10B": { descrizione:"Guaina PAST 10", codiceInterno:"10860", tipo:"C"},
-"TEASMPF12B": { descrizione:"Guaina PAST 12", codiceInterno:"10863", tipo:"C"},
-"TEASMPF17B": { descrizione:"Guaina PAST 17", codiceInterno:"10864", tipo:"C"},
-"TEASMPF23B": { descrizione:"Guaina PAST 23", codiceInterno:"10867", tipo:"C"},
-"TEASMPF29B": { descrizione:"Guaina PAST 29", codiceInterno:"10868", tipo:"C"},
-"TEASMPF36B": { descrizione:"Guaina PAST 36", codiceInterno:"10869", tipo:"C"},
-"TEASMPF48B": { descrizione:"Guaina PAST 48", codiceInterno:"10870", tipo:"C"},
-"TEABSC07": { descrizione:"Fissa guaina 7", codiceInterno:"10872", tipo:"C"},
-"TEABSC10": { descrizione:"Fissa guaina 10", codiceInterno:"10874", tipo:"C"},
-"TEABSC12": { descrizione:"Fissa guaina 12", codiceInterno:"10877", tipo:"C"},
-"TEABSC17": { descrizione:"Fissa guaina 17", codiceInterno:"10879", tipo:"C"},
-"TEABSC23": { descrizione:"Fissa guaina 23", codiceInterno:"10880", tipo:"C"},
-"TEABSC29": { descrizione:"Fissa guaina 29", codiceInterno:"10881", tipo:"C"},
-"TEAR42": { descrizione:"Riduzione PG13-11", codiceInterno:"10883", tipo:"C"},
-"TEARPP43": { descrizione:"Riduzione PG13,5-16", codiceInterno:"10884", tipo:"C"},
-"TEAR44RPP44": { descrizione:"Riduzione PG16-21", codiceInterno:"10885", tipo:"C"},
-"TEAR45": { descrizione:"Riduzione PG21-29", codiceInterno:"10886", tipo:"C"},
-"TEAR46": { descrizione:"Riduzione PG29-36", codiceInterno:"10887", tipo:"C"},
-"PANPLT1M-C": { descrizione:"Fascetta 99mm", codiceInterno:"10892", tipo:"C"},
-"PANPLT1.5M-C": { descrizione:"Fascetta 142mm", codiceInterno:"10893", tipo:"C"},
-"PANPLT1.5M-C0": { descrizione:"Fascetta 142mm nera", codiceInterno:"10894", tipo:"C"},
-"PANPLT2M-C": { descrizione:"Fascetta 203mm", codiceInterno:"10896", tipo:"C"},
-"PANPLT2M-C0": { descrizione:"Fascetta 203mm nera", codiceInterno:"10898", tipo:"C"},
-"PANPLT3I-C": { descrizione:"Fascetta 290mm", codiceInterno:"10899", tipo:"C"},
-"PANPLT3I-C0": { descrizione:"Fascetta 290mm nera", codiceInterno:"10900", tipo:"C"},
-
-// 👉 (ho ridotto qui per leggibilità ma funziona già così)
+"016P3P22": { descrizione:"Pulsante 3 posizioni", codiceInterno:"8190", tipo:"T"}
 };
 
 // 📦 ORDINE
-let ordine = {};
+let ordine = JSON.parse(localStorage.getItem("ordine")) || {};
+aggiornaLista();
 
 // 📷 SCANNER
+let scanner;
+
 function startScanner() {
-  const scanner = new Html5QrcodeScanner("reader", { fps: 10 });
 
-  scanner.render((codice) => {
-    scanner.clear();
+  if (scanner) return;
 
-    if (!prodotti[codice]) {
-      alert("❌ Prodotto non trovato");
-      return;
+  scanner = new Html5Qrcode("reader");
+
+  scanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 300, height: 300 } },
+
+    (codice) => {
+
+      let codicePulito = codice.trim().toUpperCase();
+
+      if (!prodotti[codicePulito]) {
+        alert("❌ Prodotto non trovato: " + codicePulito);
+        return;
+      }
+
+      let qty = parseInt(prompt("Quantità per " + codicePulito));
+
+      if (isNaN(qty) || qty <= 0) {
+        alert("Quantità non valida");
+        return;
+      }
+
+      ordine[codicePulito] = (ordine[codicePulito] || 0) + qty;
+
+      salvaOrdine();
+      aggiornaLista();
+
+      if (navigator.vibrate) navigator.vibrate(200);
+      new Audio("https://www.soundjay.com/buttons/beep-07.wav").play();
     }
-
-    let qty = parseInt(prompt("Quantità per " + codice));
-
-    if (!ordine[codice]) ordine[codice] = 0;
-    ordine[codice] += qty;
-
-    aggiornaLista();
-    navigator.vibrate(200);
-  });
+  );
 }
 
-// 📊 LISTA LIVE
+function stopScanner() {
+  if (scanner) {
+    scanner.stop().then(() => {
+      scanner.clear();
+      scanner = null;
+    });
+  }
+}
+
+// 📊 LISTA
 function aggiornaLista() {
   let ul = document.getElementById("lista");
   ul.innerHTML = "";
 
   for (let cod in ordine) {
+
     let li = document.createElement("li");
-    li.innerText = cod + " → " + ordine[cod];
+
+    li.innerHTML = `
+      <b>${cod}</b> → ${ordine[cod]}
+      <button class="small-btn" onclick="rimuovi('${cod}')">❌</button>
+    `;
+
     ul.appendChild(li);
   }
 }
 
+// ❌ RIMUOVI
+function rimuovi(cod) {
+  delete ordine[cod];
+  salvaOrdine();
+  aggiornaLista();
+}
+
+// 🗑️ RESET
+function resetOrdine() {
+  if (!confirm("Vuoi cancellare tutto l'ordine?")) return;
+  ordine = {};
+  salvaOrdine();
+  aggiornaLista();
+}
+
+// 💾 SALVA
+function salvaOrdine() {
+  localStorage.setItem("ordine", JSON.stringify(ordine));
+}
+
 // ✅ FINE ORDINE
 function fineOrdine() {
+
+  if (Object.keys(ordine).length === 0) {
+    alert("Ordine vuoto!");
+    return;
+  }
 
   let dati = [];
 
@@ -127,12 +197,18 @@ function fineOrdine() {
     });
   }
 
-  generaExcel(dati);
-  inviaWhatsApp(dati);
+  if (confirm("Vuoi salvare l'Excel?")) {
+    generaExcel(dati);
+  }
+
+  if (confirm("Vuoi inviare su WhatsApp?")) {
+    inviaWhatsApp(dati);
+  }
 }
 
 // 📊 EXCEL
 function generaExcel(dati) {
+
   let ws = XLSX.utils.json_to_sheet(dati);
   let wb = XLSX.utils.book_new();
 
@@ -143,7 +219,11 @@ function generaExcel(dati) {
 
 // 📤 WHATSAPP
 function inviaWhatsApp(dati) {
-  let testo = dati.map(d => `${d.CODICE} - ${d["Q.ta"]}`).join("%0A");
+
+  let testo = dati.map(d =>
+    `${d.Descrizione}\nCod: ${d.CODICE}\nQta: ${d["Q.ta"]}\n`
+  ).join("%0A");
+
   window.open(`https://wa.me/?text=${testo}`);
 }
 
